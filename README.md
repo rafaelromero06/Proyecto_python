@@ -27,7 +27,7 @@ employee_attrition/
 ├── data    #Datos usados
 ├── app.py  #Inicialización de la app
 ├── requirements.txt  #Librerias usadas
-└── tabs/ #Contenido
+└── pages/ #Contenido
 
 
 ```
@@ -51,15 +51,10 @@ Ejecutar app.py
 
 | Pestaña | Descripción |
 |---|---|
-| **Intro** | Se da un resumen de lo que veremos en el análisis |
-| **Mercado** | Muestra el panorama global del mercado de cryptos en tiempo real |
-| **Problema** | Planteamos el problema a resolver |
-| **Objetivos** | Metas y justificación del análisis |
-| **Macro** | Variables y conceptos del mercado cripto |
-| **Método** | Pipeline de datos y modelo |
-| **Resultados** | EDA: series de tiempo, histogramas, correl. |
-| **Limites** | Restricciones técnicas, de datos y de modelado que deben considerarse al interpretar los resultados |
-| **Colclusiones** | Hallazgos y proyecciones |
+| **Mercado** | Se da un resumen de lo que veremos en el análisis |
+| **Histórico** | Muestra el panorama global del mercado de cryptos en tiempo real |
+| **Eda** | Planteamos el problema a resolver |
+| **Arima** | Metas y justificación del análisis |
 
 ---
 
