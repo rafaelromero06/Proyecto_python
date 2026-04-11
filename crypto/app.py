@@ -155,7 +155,7 @@ def render(page, theme):
 
     return sidebar, content
 
-server=app.server
+server = app.server
 # ── Punto de entrada ─────────────────────────────────────────────────────────
 if __name__ == "__main__":
     app.run(debug=True, port=8050)
