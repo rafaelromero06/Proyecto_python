@@ -38,10 +38,10 @@ app = Dash(
 
 # ── Definición del menú ───────────────────────────────────────────────────────
 NAV = [
-    ("mercado",    "📈", "Mercado en vivo"),
-    ("historico",  "🕐", "Histórico 3 años"),
-    ("eda",        "🔬", "Análisis exploratorio"),
-    ("prediccion", "🔮", "Predicción ARIMA"),
+    ("mercado",    "", "Mercado en vivo"),
+    ("historico",  "", "Histórico 3 años"),
+    ("eda",        "", "Análisis exploratorio"),
+    ("prediccion", "", "Predicción ARIMA"),
 ]
 
 
@@ -114,8 +114,8 @@ app.layout = html.Div(
 )
 def toggle_theme(n, current):
     if n and n % 2 == 1:
-        return "dark", "dark", "☀️ Modo claro"
-    return "light", "light", "🌙 Modo oscuro"
+        return "dark", "dark", " Modo claro"
+    return "light", "light", " Modo oscuro"
 
 
 # Actualizar pestaña activa al hacer clic en el sidebar
