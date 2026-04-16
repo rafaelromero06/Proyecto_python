@@ -1,11 +1,5 @@
 """
-app.py — Crypto Dashboard v3
-Importa módulos desde /pages/ (evita conflicto con 'tabs' de site-packages).
-Incluye:
-  - Sidebar de navegación fija
-  - Toggle claro / oscuro
-  - dcc.Store para persistir el tema en la sesión
-  - dcc.Interval para auto-refresh de datos de mercado
+app.py — Crypto Dashboard v3 (Con Menú Colapsable)
 """
 
 import sys
@@ -15,7 +9,7 @@ import os
 _ROOT = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, _ROOT)
 
-from dash import Dash, html, dcc, Input, Output, State, ctx
+from dash import Dash, html, dcc, Input, Output, State, ctx, callback
 import dash_bootstrap_components as dbc
 
 # ── importar layouts desde /pages ────────────────────────────────────────────
@@ -28,36 +22,56 @@ from pages import prediccion
 # ── Inicializar app ───────────────────────────────────────────────────────────
 app = Dash(
     __name__,
-    external_stylesheets=[dbc.themes.FLATLY],
+    external_stylesheets=[dbc.themes.FLATLY, dbc.icons.BOOTSTRAP],
     suppress_callback_exceptions=True,
     title="Crypto Dashboard",
-    meta_tags=[{
-        "name": "viewport",
-        "content": "width=device-width, initial-scale=1",
-    }],
+    meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=1"}],
 )
 
 # ── Definición del menú ───────────────────────────────────────────────────────
 NAV = [
-    ("inicio",      "", "Inicio"),
-    ("mercado",    "", "Mercado en vivo"),
-    ("historico",  "", "Histórico 3 años"),
-    ("eda",        "", "Análisis exploratorio"),
-    ("prediccion", "", "Predicción ARIMA"),
+    ("inicio",     "🏠", "Inicio"),
+    ("mercado",    "📊", "Mercado en vivo"),
+    ("historico",  "⏳", "Histórico 3 años"),
+    ("eda",        "🔍", "Análisis exploratorio"),
+    ("prediccion", "📈", "Predicción ARIMA"),
 ]
 
-
-def _sidebar(active: str) -> html.Div:
-    items = [html.Div("Módulos", className="nav-group-label")]
+def _sidebar(active: str, is_open: bool) -> html.Div:
+    """Genera el sidebar con el menú colapsable."""
+    menu_items = []
     for tab_id, icon, label in NAV:
         cls = "nav-item active" if tab_id == active else "nav-item"
-        items.append(html.Div(
-            [html.Span(icon, className="nav-icon"), label],
+        menu_items.append(html.Div(
+            [html.Span(icon, className="nav-icon", style={"marginRight": "10px"}), label],
             className=cls,
             id={"type": "nav", "index": tab_id},
             n_clicks=0,
+            style={"cursor": "pointer", "padding": "10px 20px"}
         ))
-    return html.Div(items, className="sidebar")
+
+    return html.Div([
+        # Botón Toggle del Grupo
+        html.Div([
+            dbc.Button(
+                [
+                    "MÓDULOS ", 
+                    html.Span("▼" if is_open else "▶", style={"fontSize": "0.6rem", "marginLeft": "5px"})
+                ],
+                id="btn-modulos-collapse",
+                color="link",
+                className="nav-group-label",
+                style={"textDecoration": "none", "width": "100%", "textAlign": "left", "padding": "10px 20px"}
+            ),
+        ]),
+        
+        # Contenedor Colapsable
+        dbc.Collapse(
+            html.Div(menu_items),
+            id="collapse-modulos",
+            is_open=is_open,
+        )
+    ], className="sidebar", style={"width": "260px", "borderRight": "1px solid var(--border)"})
 
 
 # ── Layout raíz ───────────────────────────────────────────────────────────────
@@ -67,7 +81,8 @@ app.layout = html.Div(
     children=[
         # ── Stores e Interval ────────────────────────────────────────────
         dcc.Store(id="theme-store", storage_type="session", data="light"),
-        dcc.Store(id="page-store",  storage_type="session", data="mercado"),
+        dcc.Store(id="page-store",  storage_type="session", data="inicio"),
+        dcc.Store(id="collapse-store", storage_type="session", data=True), # Persiste el estado del menú
         dcc.Interval(id="iv-global", interval=300_000, n_intervals=0),
 
         # ── Topbar ───────────────────────────────────────────────────────
@@ -105,7 +120,18 @@ app.layout = html.Div(
 
 # ── Callbacks ─────────────────────────────────────────────────────────────────
 
-# Toggle de tema
+# 1. Toggle de menú colapsable (MÓDULOS)
+@app.callback(
+    Output("collapse-store", "data"),
+    Input("btn-modulos-collapse", "n_clicks"),
+    State("collapse-store", "data"),
+    prevent_initial_call=True
+)
+def toggle_collapse(n, is_open):
+    return not is_open
+
+
+# 2. Toggle de tema
 @app.callback(
     Output("root",        "data-theme"),
     Output("theme-store", "data"),
@@ -120,7 +146,7 @@ def toggle_theme(n, current):
     return "light", "light", "🌙 Modo oscuro"
 
 
-# Actualizar pestaña activa al hacer clic en el sidebar
+# 3. Actualizar pestaña activa
 @app.callback(
     Output("page-store", "data"),
     Input({"type": "nav", "index": "inicio"},      "n_clicks"),
@@ -134,18 +160,19 @@ def set_page(*_):
     triggered = ctx.triggered_id
     if triggered and isinstance(triggered, dict):
         return triggered["index"]
-    return "mercado"
+    return "inicio"
 
 
-# Renderizar sidebar y contenido
+# 4. Renderizar sidebar y contenido
 @app.callback(
     Output("sidebar-slot", "children"),
     Output("content-slot", "children"),
-    Input("page-store",  "data"),
-    Input("theme-store", "data"),
+    Input("page-store",    "data"),
+    Input("theme-store",   "data"),
+    Input("collapse-store", "data"), # Re-renderiza cuando se abre/cierra
 )
-def render(page, theme):
-    sidebar = _sidebar(page)
+def render(page, theme, is_open):
+    sidebar_content = _sidebar(page, is_open)
 
     mapping = {
         "inicio"   : inicio.layout,
@@ -157,9 +184,9 @@ def render(page, theme):
     fn      = mapping.get(page, inicio.layout)
     content = fn()
 
-    return sidebar, content
+    return sidebar_content, content
 
 server = app.server
-# ── Punto de entrada ─────────────────────────────────────────────────────────
+
 if __name__ == "__main__":
     app.run(debug=True, port=8050)
