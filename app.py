@@ -154,7 +154,7 @@ def render(page, theme):
         "eda"       : eda.layout,
         "prediccion": prediccion.layout,
     }
-    fn      = mapping.get(page, mercado.layout)
+    fn      = mapping.get(page, inicio.layout)
     content = fn()
 
     return sidebar, content
