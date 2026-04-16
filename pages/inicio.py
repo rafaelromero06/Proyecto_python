@@ -275,24 +275,37 @@ def _objetivo(num, titulo, desc, color):
 def _nav_card(emoji, titulo, desc, ruta):
     return dcc.Link(
         html.Div([
-            html.Div(emoji, style={"fontSize": "1.8rem", "marginBottom": "8px"}),
+            html.Div(emoji, style={
+                "fontSize": "1.8rem",
+                "marginBottom": "8px"
+            }),
+
             html.Strong(titulo, style={
-                "color": "var(--accent-blue)", "fontSize": "0.9rem",
-                "display": "block", "marginBottom": "6px"
+                "color": "var(--accent-blue)",
+                "fontSize": "0.9rem",
+                "display": "block",
+                "marginBottom": "6px"
             }),
+
             html.P(desc, style={
-                "color": "var(--text-dim)", "fontSize": "0.80rem",
-                "lineHeight": "1.5", "marginBottom": "0"
+                "color": "var(--text-dim)",
+                "fontSize": "0.80rem",
+                "lineHeight": "1.5",
+                "marginBottom": "0"
             }),
+
         ], style={
-            "background": "var(--bg-card2)", "borderRadius": "10px",
-            "padding": "16px", "marginBottom": "12px",
+            "background": "var(--bg-card2)",
+            "borderRadius": "10px",
+            "padding": "16px",
+            "marginBottom": "12px",
             "border": "1px solid var(--border)",
             "height": "calc(100% - 12px)",
-            "transition": "all 0.2s",
             "cursor": "pointer",
+            "transition": "all 0.25s ease",
         }),
         href=ruta,
+        refresh=False,  # 🔥 IMPORTANTE (no recarga la app)
         style={"textDecoration": "none"}
     )
 
