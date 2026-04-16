@@ -19,6 +19,7 @@ from dash import Dash, html, dcc, Input, Output, State, ctx
 import dash_bootstrap_components as dbc
 
 # ── importar layouts desde /pages ────────────────────────────────────────────
+from pages import inicio
 from pages import mercado
 from pages import historico
 from pages import eda
@@ -38,10 +39,11 @@ app = Dash(
 
 # ── Definición del menú ───────────────────────────────────────────────────────
 NAV = [
-    ("mercado",    "📈", "Mercado en vivo"),
-    ("historico",  "🕐", "Histórico 3 años"),
-    ("eda",        "🔬", "Análisis exploratorio"),
-    ("prediccion", "🔮", "Predicción ARIMA"),
+    ("inicio",      "", "Inicio"),
+    ("mercado",    "", "Mercado en vivo"),
+    ("historico",  "", "Histórico 3 años"),
+    ("eda",        "", "Análisis exploratorio"),
+    ("prediccion", "", "Predicción ARIMA"),
 ]
 
 
@@ -121,6 +123,7 @@ def toggle_theme(n, current):
 # Actualizar pestaña activa al hacer clic en el sidebar
 @app.callback(
     Output("page-store", "data"),
+    Input({"type": "nav", "index": "inicio"},      "n_clicks"),
     Input({"type": "nav", "index": "mercado"},    "n_clicks"),
     Input({"type": "nav", "index": "historico"},  "n_clicks"),
     Input({"type": "nav", "index": "eda"},        "n_clicks"),
@@ -145,6 +148,7 @@ def render(page, theme):
     sidebar = _sidebar(page)
 
     mapping = {
+        "inicio"   : inicio.layout,
         "mercado"   : mercado.layout,
         "historico" : historico.layout,
         "eda"       : eda.layout,
