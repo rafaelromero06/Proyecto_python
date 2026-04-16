@@ -187,24 +187,15 @@ def layout():
             dbc.Row([
                 dbc.Col(_nav_card("🌍", "Mercado",
                     "Estado actual del mercado: precios, capitalización y tabla de las top 20 monedas."), md=3),
-                dbc.Col(_nav_card("🔍", "Problema",
-                    "Visualiza la volatilidad y distribución del mercado. ¿Qué tan caótico es el cripto?"), md=3),
-                dbc.Col(_nav_card("📚", "Marco Teórico",
-                    "Definiciones clave: blockchain, market cap, OHLCV, correlación y más."), md=3),
-                dbc.Col(_nav_card("⚙️", "Metodología",
-                    "Cómo funciona por dentro: API, caché, procesamiento y pipeline de datos."), md=3),
+                dbc.Col(_nav_card("🔍", "Histórico",
+                    "Comportamiento pasado del mercado: tendencias, patrones y análisis de datos históricos."), md=3),
+                dbc.Col(_nav_card("📚", "Análisis Exploratorio",
+                    "Estudio de las características y relaciones de los datos del mercado."), md=3),
+                dbc.Col(_nav_card("⚙️", "Prediccion ARIMA",
+                    "Modelos de predicción para estimar movimientos futuros del mercado."), md=3),
             ], className="mb-3"),
 
-            dbc.Row([
-                dbc.Col(_nav_card("📊", "Resultados",
-                    "El análisis completo: velas japonesas, correlaciones, heatmaps y bubble charts."), md=3),
-                dbc.Col(_nav_card("🎯", "Objetivos",
-                    "Las metas técnicas y analíticas del proyecto, con justificación y alcance."), md=3),
-                dbc.Col(_nav_card("📖", "Intro",
-                    "Descripción técnica del proyecto, fuentes de datos y tecnologías usadas."), md=3),
-                dbc.Col(_nav_card("✅", "Conclusiones",
-                    "Hallazgos principales, aporte del proyecto y líneas de trabajo futuras."), md=3),
-            ], className="mb-4"),
+
 
             # ── Datos del proyecto ────────────────────────────────────────
             dbc.Row([
