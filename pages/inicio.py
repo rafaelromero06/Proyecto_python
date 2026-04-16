@@ -22,6 +22,7 @@ def layout():
                             "width": "10px", "height": "10px",
                             "borderRadius": "50%", "background": "#88e0b4",
                             "marginRight": "8px", "animation": "pulse 1.5s infinite",
+                            "marginLeft": "260px"  
                         }),
                         html.Span("LIVE · CryptoCompare API", style={
                             "fontFamily": "monospace", "fontSize": "0.75rem",
