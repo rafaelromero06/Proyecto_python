@@ -14,6 +14,7 @@ import dash_bootstrap_components as dbc
 
 # ── importar layouts desde /pages ────────────────────────────────────────────
 from pages import inicio
+from pages import marco_teorico
 from pages import mercado
 from pages import historico
 from pages import eda
@@ -31,6 +32,7 @@ app = Dash(
 # ── Definición del menú ───────────────────────────────────────────────────────
 NAV = [
     ("inicio",     "🏠", "Inicio"),
+    ("marco_teorico", "Marco teorico"),
     ("mercado",    "📊", "Mercado en vivo"),
     ("historico",  "⏳", "Histórico 3 años"),
     ("eda",        "🔍", "Análisis exploratorio"),
@@ -166,6 +168,7 @@ def toggle_theme(n, current):
 @app.callback(
     Output("page-store", "data"),
     Input({"type": "nav", "index": "inicio"},      "n_clicks"),
+    Input({"type":"nav","index":"marco_teorico"},"n_clicks"),
     Input({"type": "nav", "index": "mercado"},    "n_clicks"),
     Input({"type": "nav", "index": "historico"},  "n_clicks"),
     Input({"type": "nav", "index": "eda"},        "n_clicks"),
@@ -194,6 +197,7 @@ def render(page, theme, is_open):
     # Cargar Layout de la página
     mapping = {
         "inicio"   : inicio.layout,
+        "marco_teorico": inicio.layout,
         "mercado"   : mercado.layout,
         "historico" : historico.layout,
         "eda"       : eda.layout,
