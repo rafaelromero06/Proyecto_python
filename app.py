@@ -197,7 +197,7 @@ def render(page, theme, is_open):
     # Cargar Layout de la página
     mapping = {
         "inicio"   : inicio.layout,
-        "marco_teorico": inicio.layout,
+        "marco_teorico": marco_teorico.layout,
         "mercado"   : mercado.layout,
         "historico" : historico.layout,
         "eda"       : eda.layout,
