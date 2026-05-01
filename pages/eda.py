@@ -1,5 +1,3 @@
-
-
 """
 pages/eda.py
 Análisis Exploratorio Interactivo — 10 monedas, selector dinámico.
@@ -12,7 +10,7 @@ Secciones:
   6. Scatter de retornos (moneda vs BTC)
   7. Pruebas estadísticas (ADF, curtosis, asimetría, Jarque-Bera)
 """
- 
+
 import sys
 import os
 import warnings
@@ -21,20 +19,19 @@ import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
-from scipy import stats as sp_stats
 from dash import html, dcc, callback, Input, Output
 import dash_bootstrap_components as dbc
- 
+
 warnings.filterwarnings("ignore")
- 
+
 _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(_HERE, "..", "data"))
-from fetch_data import fetch_histoday, fetch_multi, TOP_10
- 
+from data import fetch_histoday, fetch_multi, TOP_10
+
 MONO  = "JetBrains Mono, monospace"
 COINS = TOP_10
- 
- 
+
+
 def layout():
     return html.Div([
         html.Div([
@@ -42,7 +39,7 @@ def layout():
             html.P("Serie de tiempo, distribuciones, volatilidad y correlaciones — hasta 3 años",
                    className="page-sub"),
         ], className="page-head"),
- 
+
         # ── controles ────────────────────────────────────────────────────
         dbc.Row([
             dbc.Col([
@@ -80,18 +77,18 @@ def layout():
                 ),
             ], md=4),
         ], className="mb-3"),
- 
+
         # ── KPIs dinámicos ────────────────────────────────────────────────
         html.Div(id="eda-kpis"),
- 
+
         # ── contenido ────────────────────────────────────────────────────
         html.Div(id="eda-body"),
- 
+
     ], className="main", style={"paddingTop": "80px"})
- 
- 
+
+
 # ── callback ─────────────────────────────────────────────────────────────────
- 
+
 @callback(
     Output("eda-kpis", "children"),
     Output("eda-body", "children"),
@@ -104,16 +101,16 @@ def render(sym, days, sma, theme):
     dark    = (theme == "dark")
     df      = fetch_histoday(sym, days=days)
     df_wide = fetch_multi(COINS, days=days)
- 
+
     kpis = _build_kpis(df, sym)
     body = _build_body(df, df_wide, sym, sma, dark)
     return kpis, body
- 
- 
+
+
 def _build_kpis(df, sym):
     if df.empty:
         return html.P("Sin datos.", className="mid")
- 
+
     p_now  = df["close"].iloc[-1]
     p_ini  = df["close"].iloc[0]
     rend   = (p_now / p_ini - 1) * 100
@@ -121,13 +118,13 @@ def _build_kpis(df, sym):
     mxd    = _max_dd(df["close"])
     p_max  = df["high"].max()
     p_min  = df["low"].min()
- 
+
     def fp(p):
         return f"${p:,.2f}" if p >= 1 else f"${p:.6f}"
- 
+
     sign = "+" if rend >= 0 else ""
     clsr = "up" if rend >= 0 else "down"
- 
+
     return dbc.Row([
         _kpi(fp(p_now),           f"{sym} Precio actual",     "accent"),
         _kpi(f"{sign}{rend:.1f}%","Rendimiento período",      clsr),
@@ -136,8 +133,8 @@ def _build_kpis(df, sym):
         _kpi(fp(p_max),           "Máximo del período",       "up"),
         _kpi(fp(p_min),           "Mínimo del período",       "down"),
     ], className="mb-2")
- 
- 
+
+
 def _build_body(df, df_wide, sym, sma, dark):
     return html.Div([
         # OHLC + volumen
@@ -146,7 +143,7 @@ def _build_body(df, df_wide, sym, sma, dark):
             dcc.Graph(figure=_fig_ohlc(df, sym, sma, dark),
                       config={"displayModeBar": False})
         ], className="gw"),
- 
+
         # retornos y volatilidad
         html.Div("Distribución de retornos", className="sec"),
         dbc.Row([
@@ -159,7 +156,7 @@ def _build_body(df, df_wide, sym, sma, dark):
                           config={"displayModeBar": False})
             ], className="gw"), md=6),
         ]),
- 
+
         # boxplot + correlación
         html.Div("Comparativa entre monedas", className="sec"),
         dbc.Row([
@@ -172,22 +169,22 @@ def _build_body(df, df_wide, sym, sma, dark):
                           config={"displayModeBar": False})
             ], className="gw"), md=7),
         ]),
- 
+
         # scatter de retornos
         html.Div("Correlación de retornos", className="sec"),
         html.Div([
             dcc.Graph(figure=_fig_scat(df_wide, sym, dark),
                       config={"displayModeBar": False})
         ], className="gw"),
- 
+
         # pruebas estadísticas
         html.Div("Pruebas estadísticas", className="sec"),
         _build_stats(df, sym),
     ])
- 
- 
+
+
 # ── figuras ───────────────────────────────────────────────────────────────────
- 
+
 def _fig_ohlc(df, sym, sma, dark):
     if df.empty:
         return _empty(dark)
@@ -195,10 +192,10 @@ def _fig_ohlc(df, sym, sma, dark):
     df = df.copy()
     df[f"sma{sma}"] = df["close"].rolling(sma).mean()
     df["sma7"]      = df["close"].rolling(7).mean()
- 
+
     fig = make_subplots(rows=2, cols=1, shared_xaxes=True,
                         row_heights=[0.75, 0.25], vertical_spacing=0.02)
- 
+
     fig.add_trace(go.Candlestick(
         x=df["date"], open=df["open"], high=df["high"],
         low=df["low"], close=df["close"],
@@ -206,19 +203,19 @@ def _fig_ohlc(df, sym, sma, dark):
         decreasing_line_color=_dn(dark), decreasing_fillcolor=_dn(dark),
         name=sym, line=dict(width=1),
     ), row=1, col=1)
- 
+
     fig.add_trace(go.Scatter(
         x=df["date"], y=df["sma7"],
         line=dict(color=tdim, width=1, dash="dot"),
         name="SMA 7", opacity=0.8,
     ), row=1, col=1)
- 
+
     fig.add_trace(go.Scatter(
         x=df["date"], y=df[f"sma{sma}"],
         line=dict(color=_acc(dark), width=1.5),
         name=f"SMA {sma}",
     ), row=1, col=1)
- 
+
     barcols = [_up(dark) if c >= o else _dn(dark)
                for c, o in zip(df["close"], df["open"])]
     fig.add_trace(go.Bar(
@@ -226,7 +223,7 @@ def _fig_ohlc(df, sym, sma, dark):
         marker_color=barcols, marker_line_width=0,
         opacity=0.55, name="Volumen",
     ), row=2, col=1)
- 
+
     fig.update_layout(
         height=440, paper_bgcolor=pp, plot_bgcolor=bg,
         font=dict(family=MONO, color=txt, size=9),
@@ -244,8 +241,8 @@ def _fig_ohlc(df, sym, sma, dark):
                          linecolor=grid, tickfont=dict(color=tdim, size=8))
     fig.update_yaxes(row=1, tickprefix="$", tickformat=",")
     return fig
- 
- 
+
+
 def _fig_ret_hist(df, sym, dark):
     if df.empty:
         return _empty(dark)
@@ -253,8 +250,8 @@ def _fig_ret_hist(df, sym, dark):
     rets = df["close"].pct_change().dropna() * 100
     mu, sig = rets.mean(), rets.std()
     xn = np.linspace(rets.min(), rets.max(), 200)
-    yn = sp_stats.norm.pdf(xn, mu, sig)
- 
+    yn = _norm_pdf(xn, mu, sig)
+
     fig = go.Figure()
     fig.add_trace(go.Histogram(
         x=rets, nbinsx=55,
@@ -270,14 +267,14 @@ def _fig_ret_hist(df, sym, dark):
     fig.add_vline(x=mu, line_dash="dash", line_color=_acc(dark), line_width=1,
                   annotation_text=f"μ={mu:.2f}%",
                   annotation_font_size=8, annotation_font_color=tdim)
- 
+
     _dl(fig, f"Distribución retornos diarios — {sym}",
         bg, pp, grid, txt, tdim, 290)
     fig.update_layout(showlegend=True,
                       xaxis=dict(ticksuffix="%"))
     return fig
- 
- 
+
+
 def _fig_vol(df, sym, dark):
     if df.empty:
         return _empty(dark)
@@ -285,13 +282,13 @@ def _fig_vol(df, sym, dark):
     df = df.copy()
     df["v30"] = df["close"].pct_change().rolling(30).std() * np.sqrt(365) * 100
     df["v7"]  = df["close"].pct_change().rolling(7).std()  * np.sqrt(365) * 100
- 
+
     fig = go.Figure()
     fig.add_trace(go.Scatter(
         x=df["date"], y=df["v30"], mode="lines",
         name="Vol 30d",
         line=dict(color=_acc(dark), width=1.8),
-        fill="tozeroy", fillcolor=_acc(dark) + "15",
+        fill="tozeroy", fillcolor=_hex_alpha(_acc(dark), 0.08),
     ))
     fig.add_trace(go.Scatter(
         x=df["date"], y=df["v7"], mode="lines",
@@ -306,8 +303,8 @@ def _fig_vol(df, sym, dark):
         yaxis=dict(ticksuffix="%"),
     )
     return fig
- 
- 
+
+
 def _fig_box(df_wide, selected, dark):
     if df_wide.empty:
         return _empty(dark)
@@ -321,7 +318,7 @@ def _fig_box(df_wide, selected, dark):
             y=rets, name=sym,
             marker_color=col, marker_size=3,
             line=dict(width=1, color=col),
-            fillcolor=col + "22",
+            fillcolor=_hex_alpha(col, 0.13),
             boxpoints="outliers",
         ))
     _dl(fig, "Boxplot retornos — 10 monedas",
@@ -331,8 +328,8 @@ def _fig_box(df_wide, selected, dark):
         yaxis=dict(ticksuffix="%"),
     )
     return fig
- 
- 
+
+
 def _fig_corr(df_wide, selected, dark):
     if df_wide.empty or len(df_wide.columns) < 3:
         return _empty(dark)
@@ -344,7 +341,7 @@ def _fig_corr(df_wide, selected, dark):
     acc  = _acc(dark)
     dn   = _dn(dark)
     cs   = [[0.0, dn], [0.5, pp], [1.0, acc]]
- 
+
     fig = px.imshow(corr, text_auto=True,
                     color_continuous_scale=cs, zmin=-1, zmax=1)
     fig.update_traces(textfont=dict(size=9, family=MONO))
@@ -360,8 +357,8 @@ def _fig_corr(df_wide, selected, dark):
         ),
     )
     return fig
- 
- 
+
+
 def _fig_scat(df_wide, selected, dark):
     if df_wide.empty:
         return _empty(dark)
@@ -370,11 +367,11 @@ def _fig_scat(df_wide, selected, dark):
     ref  = "BTC" if selected != "BTC" else "ETH"
     if ref not in cols or selected not in cols:
         return _empty(dark)
- 
+
     r1 = df_wide[ref].pct_change().dropna() * 100
     r2 = df_wide[selected].pct_change().dropna() * 100
     n  = min(len(r1), len(r2))
- 
+
     fig = go.Figure()
     fig.add_trace(go.Scatter(
         x=r1.values[:n], y=r2.values[:n],
@@ -399,16 +396,16 @@ def _fig_scat(df_wide, selected, dark):
         yaxis=dict(title=f"{selected} ret %", ticksuffix="%"),
     )
     return fig
- 
- 
+
+
 # ── pruebas estadísticas ──────────────────────────────────────────────────────
- 
+
 def _build_stats(df, sym):
     if df.empty:
         return html.P("Sin datos.", className="mid")
- 
+
     rets = df["close"].pct_change().dropna() * 100
- 
+
     # ADF
     try:
         from statsmodels.tsa.stattools import adfuller
@@ -421,14 +418,15 @@ def _build_stats(df, sym):
     except Exception:
         adf_ps, adf_rs = 1.0, 0.0
         adf_pv = adf_rv = "N/A"
- 
+
     kurt = rets.kurtosis()
     skew = rets.skew()
     try:
+        from scipy import stats as sp_stats
         jb_s, jb_p = sp_stats.jarque_bera(rets.dropna())
     except Exception:
         jb_s, jb_p = 0.0, 1.0
- 
+
     def row(nombre, stat, interp, ok=True):
         cls = "cup" if ok else "cdn"
         return html.Tr([
@@ -440,7 +438,7 @@ def _build_stats(df, sym):
                     style={"fontFamily": MONO, "fontSize": ".78rem",
                            "padding": "9px 12px"}),
         ])
- 
+
     rows = [
         row("ADF — Precios", adf_pv,
             f"p={adf_ps:.4f} → {'No estacionaria ✓' if adf_ps > 0.05 else 'Estacionaria'}",
@@ -458,7 +456,7 @@ def _build_stats(df, sym):
             f"p={jb_p:.4f} → {'No normal ✓' if jb_p < .05 else 'Posible normal'}",
             ok=True),
     ]
- 
+
     return dbc.Card([
         dbc.CardHeader(f"Pruebas estadísticas — {sym}"),
         dbc.CardBody([
@@ -478,10 +476,10 @@ def _build_stats(df, sym):
             ),
         ])
     ], className="mb-3")
- 
- 
+
+
 # ── helpers ───────────────────────────────────────────────────────────────────
- 
+
 def _dl(fig, title, bg, pp, grid, txt, tdim, h=360):
     fig.update_layout(
         height=h, paper_bgcolor=pp, plot_bgcolor=bg,
@@ -494,38 +492,49 @@ def _dl(fig, title, bg, pp, grid, txt, tdim, h=360):
         yaxis=dict(gridcolor=grid, zeroline=False, linecolor=grid,
                    tickfont=dict(color=tdim, size=8)),
     )
- 
- 
+
+
+def _norm_pdf(x, mu, sig):
+    denom = sig * np.sqrt(2 * np.pi)
+    with np.errstate(divide='ignore', invalid='ignore'):
+        y = np.exp(-0.5 * ((x - mu) / sig) ** 2) / denom
+    return np.nan_to_num(y, nan=0.0, posinf=0.0, neginf=0.0)
+
+
 def _kpi(val, lbl, cls):
     return dbc.Col(html.Div([
         html.Div(val, className="kpi-val"),
         html.Div(lbl, className="kpi-lbl"),
     ], className=f"kpi {cls}"), md=2)
- 
- 
+
+
 def _tc(dark):
     if dark:
         return "#0c0c0e","#0c0c0e","#2a2a2e","#f0f0ee","#55554e"
     return "#ffffff","#ffffff","#f2f1ee","#1a1a18","#a09d96"
- 
- 
+
+
 def _acc(dark): return "#5a7aec" if dark else "#1a46c4"
 def _up(dark):  return "#4ade80" if dark else "#166534"
 def _dn(dark):  return "#f87171" if dark else "#991b1b"
- 
- 
+
+def _hex_alpha(hex_color, alpha):
+    rgb = tuple(int(hex_color.lstrip("#")[i:i+2], 16) for i in (0, 2, 4))
+    return f"rgba({rgb[0]}, {rgb[1]}, {rgb[2]}, {alpha})"
+
+
 def _max_dd(prices):
     roll = prices.cummax()
     dd   = (prices - roll) / roll * 100
     return dd.min()
- 
- 
+
+
 def _lbl():
     return {"fontFamily": MONO, "fontSize": ".63rem", "textTransform": "uppercase",
             "letterSpacing": ".08em", "color": "var(--ink-dim)",
             "marginBottom": "6px", "display": "block"}
- 
- 
+
+
 def _empty(dark):
     bg, pp = _tc(dark)[:2]
     fig = go.Figure()
