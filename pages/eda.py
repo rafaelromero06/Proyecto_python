@@ -1,5 +1,4 @@
 
-Copiar
 
 """
 pages/eda.py
