@@ -649,6 +649,15 @@ def _acc(dark): return "#5a7aec" if dark else "#1a46c4"
 def _up(dark):  return "#4ade80" if dark else "#166534"
 def _dn(dark):  return "#f87171" if dark else "#991b1b"
 
+def _rgba(hex_color, alpha):
+    hex_color = hex_color.lstrip("#")
+    if len(hex_color) != 6:
+        return hex_color
+    r = int(hex_color[0:2], 16)
+    g = int(hex_color[2:4], 16)
+    b = int(hex_color[4:6], 16)
+    return f"rgba({r},{g},{b},{alpha:.2f})"
+
 
 def _lbl():
     return {"fontFamily":MONO,"fontSize":".63rem","textTransform":"uppercase",
