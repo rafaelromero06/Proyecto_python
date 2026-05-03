@@ -12,14 +12,6 @@ sys.path.insert(0, _ROOT)
 from dash import Dash, html, dcc, Input, Output, State, ctx
 import dash_bootstrap_components as dbc
 
-# ── importar layouts desde /pages ────────────────────────────────────────────
-from pages import inicio
-from pages import marco_teorico
-from pages import mercado
-from pages import historico
-from pages import eda
-from pages import prediccion
-
 # ── Inicializar app ───────────────────────────────────────────────────────────
 app = Dash(
     __name__,
@@ -28,6 +20,14 @@ app = Dash(
     title="Crypto Dashboard",
     meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=1"}],
 )
+
+# ── importar layouts desde /pages ────────────────────────────────────────────
+from pages import inicio
+from pages import marco_teorico
+from pages import mercado
+from pages import historico
+from pages import eda
+from pages import prediccion
 
 # ── Definición del menú ───────────────────────────────────────────────────────
 NAV = [
