@@ -343,7 +343,7 @@ def _fig_vol(df, sym, dark):
     df2["v7"]  = df2["close"].pct_change().rolling(7).std() *np.sqrt(365)*100
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=df2["date"],y=df2["v30"],mode="lines",name="Vol 30d",
-        line=dict(color=_acc(dark),width=1.8),fill="tozeroy",fillcolor=_acc(dark)+"15"))
+        line=dict(color=_acc(dark),width=1.8),fill="tozeroy",fillcolor=_rgba(_acc(dark), 0.08)))
     fig.add_trace(go.Scatter(x=df2["date"],y=df2["v7"],mode="lines",name="Vol 7d",
         line=dict(color=_dn(dark),width=1,dash="dot"),opacity=0.7))
     _dl(fig,f"Volatilidad rodante anualizada — {sym}",bg,pp,grid,txt,tdim,290)
@@ -366,7 +366,7 @@ def _fig_estac_precios(df, sym, dark):
         if sub.empty: continue
         fig.add_trace(go.Box(y=sub.values,name=trim,
             marker_color=_acc(dark),line=dict(color=_acc(dark),width=1.2),
-            fillcolor=_acc(dark)+"28",boxpoints=False))
+            fillcolor=_rgba(_acc(dark), 0.16),boxpoints=False))
     _dl(fig,f"PRECIOS por trimestre — {sym}  (❌ NO estacionario)",bg,pp,grid,txt,tdim,320)
     fig.update_layout(showlegend=False,
         yaxis=dict(tickprefix="$",tickformat=","),
@@ -393,7 +393,7 @@ def _fig_estac_retornos(df, sym, dark):
         if sub.empty: continue
         fig.add_trace(go.Box(y=sub.values,name=trim,
             marker_color=_up(dark),line=dict(color=_up(dark),width=1.2),
-            fillcolor=_up(dark)+"28",boxpoints=False))
+            fillcolor=_rgba(_up(dark), 0.16),boxpoints=False))
     _dl(fig,f"RETORNOS por trimestre — {sym}  (✅ SÍ estacionario)",bg,pp,grid,txt,tdim,320)
     fig.update_layout(showlegend=False,
         yaxis=dict(ticksuffix="%"),
@@ -427,7 +427,7 @@ def _fig_decomp(df, sym, decomp, dark):
     fig = make_subplots(rows=4, cols=1, shared_xaxes=True,
                         subplot_titles=labels, vertical_spacing=0.06)
     for i,(dat,col,fill) in enumerate(zip(datos,colors,fills),1):
-        kw = dict(fill=fill,fillcolor=col+"18") if fill else {}
+        kw = dict(fill=fill,fillcolor=_rgba(col, 0.09)) if fill else {}
         fig.add_trace(go.Scatter(x=dat.index,y=dat.values,mode="lines",
             line=dict(color=col,width=1.4),name=labels[i-1],**kw), row=i,col=1)
 
@@ -455,7 +455,7 @@ def _fig_box(df_wide, selected, dark):
         rets  = df_wide[sym].pct_change().dropna()*100
         color = _acc(dark) if sym==selected else tdim
         fig.add_trace(go.Box(y=rets,name=sym,marker_color=color,marker_size=3,
-            line=dict(width=1,color=color),fillcolor=color+"22",boxpoints="outliers"))
+            line=dict(width=1,color=color),fillcolor=_rgba(color, 0.13),boxpoints="outliers"))
     _dl(fig,"Distribución retornos — 10 monedas",bg,pp,grid,txt,tdim,320)
     fig.update_layout(showlegend=False,yaxis=dict(ticksuffix="%"))
     return fig
