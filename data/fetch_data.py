@@ -26,7 +26,7 @@ TOP_10 = ["BTC", "ETH", "BNB", "SOL", "XRP",
           "ADA", "AVAX", "DOGE", "LTC", "LINK"]
 
 _COINS_META = [
-    ("BTC",  "Bitcoin",           95000, 1850e9),
+    ("BTC",  "Bitcoin",           75000, 1850e9),
     ("ETH",  "Ethereum",           3200,  385e9),
     ("USDT", "Tether",             1.00,  140e9),
     ("BNB",  "BNB",                 650,   95e9),
