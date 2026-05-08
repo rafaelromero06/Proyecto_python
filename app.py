@@ -27,6 +27,7 @@ from pages import marco_teorico
 from pages import mercado
 from pages import historico
 from pages import eda
+from pages import modelo
 from pages import prediccion
 
 # ── Definición del menú ───────────────────────────────────────────────────────
@@ -36,6 +37,7 @@ NAV = [
     ("mercado",    "📊", "Mercado en vivo"),
     ("historico",  "⏳", "Histórico 3 años"),
     ("eda",        "🔍", "Análisis exploratorio"),
+    ("modelo",     "⚙️", "Modelo de predicción"),
     ("prediccion", "📈", "Predicción ARIMA"),
 ]
 
@@ -172,6 +174,7 @@ def toggle_theme(n, current):
     Input({"type": "nav", "index": "mercado"},    "n_clicks"),
     Input({"type": "nav", "index": "historico"},  "n_clicks"),
     Input({"type": "nav", "index": "eda"},        "n_clicks"),
+    Input({"type": "nav", "index": "modelo"},      "n_clicks"),
     Input({"type": "nav", "index": "prediccion"}, "n_clicks"),
     prevent_initial_call=True,
 )
@@ -201,6 +204,7 @@ def render(page, theme, is_open):
         "mercado"   : mercado.layout,
         "historico" : historico.layout,
         "eda"       : eda.layout,
+        "modelo"    : modelo.layout,
         "prediccion": prediccion.layout,
     }
     
