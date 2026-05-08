@@ -174,7 +174,7 @@ def toggle_theme(n, current):
     Input({"type": "nav", "index": "mercado"},    "n_clicks"),
     Input({"type": "nav", "index": "historico"},  "n_clicks"),
     Input({"type": "nav", "index": "eda"},        "n_clicks"),
-    Input({"type": "nav", "index": "modelo"},      "n_clicks"),
+    Input({"type": "nav", "index": "modelos"},      "n_clicks"),
     Input({"type": "nav", "index": "prediccion"}, "n_clicks"),
     prevent_initial_call=True,
 )
