@@ -1,0 +1,800 @@
+"""
+pages/modelo.py
+Explica por qué ARIMA es el modelo más apropiado para este proyecto,
+sus fundamentos, limitaciones y comparación con alternativas.
+"""
+ 
+import os, sys
+import numpy as np
+import pandas as pd
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+from dash import html, dcc, callback, Input, Output
+import dash_bootstrap_components as dbc
+ 
+_HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(_HERE, "..", "data"))
+from fetch_data import fetch_histoday
+ 
+MONO = "JetBrains Mono, monospace"
+ 
+ 
+# ─────────────────────────────────────────────────────────────────────────────
+# LAYOUT
+# ─────────────────────────────────────────────────────────────────────────────
+ 
+def layout():
+    return html.Div([
+ 
+        html.Div([
+            html.H1("¿Por qué ARIMA?", className="page-title"),
+            html.P(
+                "Fundamentos, justificación, limitaciones y comparación "
+                "con modelos alternativos para series temporales de criptomonedas.",
+                className="page-sub"
+            ),
+        ], className="page-head"),
+ 
+        # ── Respuesta directa ─────────────────────────────────────────────
+        html.Div(
+            "ARIMA no es necesariamente el mejor modelo posible, "
+            "pero sí el más apropiado dado el contexto de este proyecto: "
+            "serie univariada, I(1), con objetivo académico donde la "
+            "interpretabilidad y los diagnósticos estadísticos importan tanto "
+            "como la precisión del pronóstico.",
+            className="info mb-3",
+            style={"fontSize": ".92rem", "lineHeight": "1.7"}
+        ),
+ 
+        # ── § 1 Razones principales ───────────────────────────────────────
+        dbc.Card([
+            dbc.CardHeader("✅ Razones para usar ARIMA en este proyecto"),
+            dbc.CardBody([
+                dbc.Row([
+                    dbc.Col(_razon(
+                        "1",
+                        "La serie es univariada y temporal",
+                        "Solo tenemos el precio de cierre diario como variable. "
+                        "No hay datos externos como sentimiento, noticias ni "
+                        "indicadores macroeconómicos. ARIMA fue diseñado "
+                        "exactamente para este caso: una sola variable "
+                        "cuyo pasado contiene información sobre su futuro.",
+                        "var(--accent)"
+                    ), md=6),
+                    dbc.Col(_razon(
+                        "2",
+                        "Los precios son integrados de orden 1 — I(1)",
+                        "La prueba ADF confirmó que los precios NO son "
+                        "estacionarios, pero los retornos SÍ lo son. "
+                        "Esto significa que la serie necesita exactamente "
+                        "una diferenciación para volverse estacionaria. "
+                        "ARIMA incorpora esto con el parámetro d = 1, "
+                        "sin necesidad de preprocesar manualmente la serie.",
+                        "var(--accent)"
+                    ), md=6),
+                ], className="mb-3"),
+                dbc.Row([
+                    dbc.Col(_razon(
+                        "3",
+                        "Es interpretable y diagnósticable",
+                        "A diferencia de redes neuronales o gradient boosting, "
+                        "ARIMA genera intervalos de confianza automáticos, "
+                        "permite validar el ajuste con ACF, PACF y Ljung-Box, "
+                        "y cada coeficiente tiene un significado estadístico "
+                        "claro. En un contexto académico esto es fundamental.",
+                        "var(--accent)"
+                    ), md=6),
+                    dbc.Col(_razon(
+                        "4",
+                        "Es el baseline estándar en series temporales",
+                        "En literatura académica y en la industria, ARIMA es "
+                        "el punto de comparación obligatorio. Antes de usar "
+                        "modelos más complejos, se mide si superan a ARIMA. "
+                        "Si un LSTM no supera a ARIMA, la complejidad "
+                        "adicional no está justificada.",
+                        "var(--accent)"
+                    ), md=6),
+                ]),
+            ])
+        ], className="mb-3"),
+ 
+        # ── § 2 Por qué d=1 ──────────────────────────────────────────────
+        dbc.Card([
+            dbc.CardHeader("📐 ¿Por qué d = 1? — La lógica detrás del parámetro"),
+            dbc.CardBody([
+                dbc.Row([
+                    dbc.Col([
+                        html.P(
+                            "El parámetro d indica cuántas veces hay que "
+                            "diferenciar la serie para hacerla estacionaria.",
+                            style={"fontSize": ".90rem", "color": "var(--ink)",
+                                   "lineHeight": "1.7", "marginBottom": "14px"}
+                        ),
+                        _formula(
+                            "Precio original (no estacionario)",
+                            "P_t = precio del día t",
+                            "La media cambia con el tiempo (tendencia). "
+                            "No se puede modelar directamente."
+                        ),
+                        _formula(
+                            "Primera diferencia (d = 1) → estacionario",
+                            "ΔP_t = P_t − P_{t−1}  ≈  retorno en USD",
+                            "La media de las diferencias es constante. "
+                            "ARIMA(p, 1, q) aplica esto automáticamente."
+                        ),
+                        html.Div([
+                            html.Strong("Regla práctica: ", style={"color": "var(--accent)"}),
+                            html.Span(
+                                "Si ADF sobre precios da p > 0.05 (no estacionario) "
+                                "y ADF sobre retornos da p ≤ 0.05 (estacionario), "
+                                "entonces d = 1 es el valor correcto.",
+                                style={"fontSize": ".86rem", "color": "var(--ink-mid)"}
+                            ),
+                        ], style={
+                            "background": "var(--bg-subtle)", "borderRadius": "6px",
+                            "padding": "12px 14px", "border": "1px solid var(--rule)",
+                            "borderLeft": "3px solid var(--accent)"
+                        }),
+                    ], md=6),
+                    dbc.Col([
+                        html.Div(id="modelo-adf-graph"),
+                    ], md=6),
+                ])
+            ])
+        ], className="mb-3"),
+ 
+        # ── § 3 División train/test ───────────────────────────────────────
+        dbc.Card([
+            dbc.CardHeader("📊 División de datos: 80% entrenamiento / 20% validación"),
+            dbc.CardBody([
+                html.P(
+                    "En series temporales la división NUNCA es aleatoria. "
+                    "El orden importa: siempre se entrena con el pasado "
+                    "y se valida con el futuro, simulando una predicción real.",
+                    style={"fontSize": ".90rem", "color": "var(--ink-mid)",
+                           "lineHeight": "1.7", "marginBottom": "16px"}
+                ),
+ 
+                # Diagrama visual de la división
+                html.Div([
+                    html.Div([
+                        html.Div([
+                            html.Div("ENTRENAMIENTO", style={
+                                "fontFamily": MONO, "fontSize": ".70rem",
+                                "color": "var(--accent)", "letterSpacing": ".08em",
+                                "marginBottom": "4px"
+                            }),
+                            html.Div("~335 días ≈ 92%", style={
+                                "fontFamily": MONO, "fontSize": ".85rem",
+                                "color": "var(--ink)", "fontWeight": "600"
+                            }),
+                            html.Div("El modelo aprende la estructura de la serie", style={
+                                "fontSize": ".78rem", "color": "var(--ink-dim)",
+                                "marginTop": "4px"
+                            }),
+                        ], style={
+                            "background": "var(--accent-lt)",
+                            "border": "2px solid var(--accent)",
+                            "borderRadius": "8px 0 0 8px",
+                            "padding": "16px 20px",
+                            "flex": "0 0 72%", "textAlign": "center",
+                        }),
+                        html.Div([
+                            html.Div("VALIDACIÓN", style={
+                                "fontFamily": MONO, "fontSize": ".70rem",
+                                "color": "var(--up)", "letterSpacing": ".08em",
+                                "marginBottom": "4px"
+                            }),
+                            html.Div("30 días ≈ 8%", style={
+                                "fontFamily": MONO, "fontSize": ".85rem",
+                                "color": "var(--ink)", "fontWeight": "600"
+                            }),
+                            html.Div("Se mide MAE, RMSE y MAPE", style={
+                                "fontSize": ".78rem", "color": "var(--ink-dim)",
+                                "marginTop": "4px"
+                            }),
+                        ], style={
+                            "background": "var(--up-bg)",
+                            "border": "2px solid var(--up)",
+                            "borderRadius": "0 8px 8px 0",
+                            "padding": "16px 20px",
+                            "flex": "0 0 28%", "textAlign": "center",
+                        }),
+                    ], style={"display": "flex", "marginBottom": "14px"}),
+                ]),
+ 
+                dbc.Row([
+                    dbc.Col(_punto(
+                        "⏳ Hold-out temporal",
+                        "Se usa el método hold-out temporal (no cross-validation). "
+                        "La validación cruzada estándar mezcla datos y rompería "
+                        "la secuencia temporal, lo que invalidaría el experimento."
+                    ), md=4),
+                    dbc.Col(_punto(
+                        "📅 30 días de validación",
+                        "Un mes calendario es una ventana significativa en "
+                        "análisis financiero. Permite medir el error en un "
+                        "horizonte realista de pronóstico a corto plazo."
+                    ), md=4),
+                    dbc.Col(_punto(
+                        "🚫 Sin datos futuros",
+                        "El modelo nunca 've' los datos de validación durante "
+                        "el entrenamiento. Esto garantiza que las métricas "
+                        "de error reflejan capacidad predictiva real."
+                    ), md=4),
+                ]),
+            ])
+        ], className="mb-3"),
+ 
+        # ── § 4 Métricas de evaluación ────────────────────────────────────
+        dbc.Card([
+            dbc.CardHeader("📏 Métricas de evaluación del modelo"),
+            dbc.CardBody([
+                dbc.Row([
+                    dbc.Col(_metrica(
+                        "MAE",
+                        "Mean Absolute Error",
+                        "MAE = (1/n) × Σ |y_real − y_pred|",
+                        "Error promedio en USD. Fácil de interpretar: "
+                        "si MAE = $500, el modelo se equivoca en promedio $500 por día. "
+                        "No penaliza errores grandes de forma desproporcionada.",
+                        "var(--accent)"
+                    ), md=4),
+                    dbc.Col(_metrica(
+                        "RMSE",
+                        "Root Mean Square Error",
+                        "RMSE = √[(1/n) × Σ (y_real − y_pred)²]",
+                        "Similar al MAE pero penaliza más los errores grandes. "
+                        "Si el modelo tiene algunos días con errores muy grandes, "
+                        "el RMSE será mucho mayor que el MAE.",
+                        "var(--accent)"
+                    ), md=4),
+                    dbc.Col(_metrica(
+                        "MAPE",
+                        "Mean Absolute Percentage Error",
+                        "MAPE = (1/n) × Σ |y_real − y_pred| / |y_real| × 100",
+                        "Error porcentual. Independiente del nivel de precios, "
+                        "permite comparar el modelo entre diferentes monedas "
+                        "que tienen precios muy distintos.",
+                        "var(--accent)"
+                    ), md=4),
+                ])
+            ])
+        ], className="mb-3"),
+ 
+        # ── § 5 Limitaciones ──────────────────────────────────────────────
+        dbc.Card([
+            dbc.CardHeader("⚠️ Limitaciones reales de ARIMA en criptomonedas"),
+            dbc.CardBody([
+                dbc.Row([
+                    dbc.Col(_limitacion(
+                        "📉 No modela volatilidad variable",
+                        "Los precios cripto tienen períodos tranquilos y "
+                        "períodos de alta volatilidad (clusters). ARIMA asume "
+                        "varianza constante. El modelo correcto para esto "
+                        "sería GARCH (Generalized AutoRegressive "
+                        "Conditional Heteroskedasticity).",
+                        "var(--down)"
+                    ), md=6),
+                    dbc.Col(_limitacion(
+                        "📰 No incorpora factores externos",
+                        "Noticias regulatorias, tweets de influencers, "
+                        "aprobación de ETFs o quiebras de exchanges pueden "
+                        "mover el precio un 30% en horas. ARIMA no tiene "
+                        "forma de incorporar esta información.",
+                        "var(--down)"
+                    ), md=6),
+                ], className="mb-3"),
+                dbc.Row([
+                    dbc.Col(_limitacion(
+                        "📐 Solo relaciones lineales",
+                        "Los mercados cripto tienen dinámicas no lineales, "
+                        "cambios de régimen abruptos y comportamientos de "
+                        "manada que ARIMA no puede capturar. Los modelos "
+                        "de deep learning son mejores en este aspecto.",
+                        "var(--down)"
+                    ), md=6),
+                    dbc.Col(_limitacion(
+                        "🕐 Horizonte corto fiable",
+                        "ARIMA pierde precisión rápidamente después de "
+                        "7 a 14 días porque sus intervalos de confianza "
+                        "se ensanchan exponencialmente. No es adecuado "
+                        "para pronósticos de largo plazo.",
+                        "var(--down)"
+                    ), md=6),
+                ]),
+            ])
+        ], className="mb-3"),
+ 
+        # ── § 6 Comparativa de modelos ────────────────────────────────────
+        dbc.Card([
+            dbc.CardHeader("🔀 Comparativa de modelos alternativos"),
+            dbc.CardBody([
+                html.P(
+                    "Si este proyecto evolucionara hacia producción real, "
+                    "estos serían los modelos a considerar, ordenados por complejidad:",
+                    style={"fontSize": ".90rem", "color": "var(--ink-mid)",
+                           "marginBottom": "16px", "lineHeight": "1.7"}
+                ),
+                html.Table([
+                    html.Thead(html.Tr([
+                        html.Th("Modelo"),
+                        html.Th("Tipo"),
+                        html.Th("Ventaja principal"),
+                        html.Th("Limitación principal"),
+                        html.Th("¿Cuándo usarlo?"),
+                    ])),
+                    html.Tbody([
+                        _fila_modelo(
+                            "ARIMA ← aquí estamos",
+                            "Estadístico",
+                            "Interpretable, diagnósticable, intervalos de confianza",
+                            "No modela volatilidad variable ni no linealidades",
+                            "Baseline, datos limitados, contexto académico",
+                            highlight=True
+                        ),
+                        _fila_modelo(
+                            "GARCH",
+                            "Estadístico",
+                            "Modela correctamente la volatilidad variable",
+                            "Solo modela varianza, no el nivel de precios",
+                            "Cuando la volatilidad cambia con el tiempo (siempre en cripto)"
+                        ),
+                        _fila_modelo(
+                            "Prophet",
+                            "ML / Estadístico",
+                            "Maneja cambios de tendencia y estacionalidad fácilmente",
+                            "Menos preciso en series muy ruidosas como cripto",
+                            "Cuando hay patrones estacionales claros"
+                        ),
+                        _fila_modelo(
+                            "XGBoost / LightGBM",
+                            "Machine Learning",
+                            "Captura relaciones no lineales con muchas variables",
+                            "Requiere feature engineering manual, sin IC nativos",
+                            "Cuando hay variables externas (volumen, sentimiento)"
+                        ),
+                        _fila_modelo(
+                            "LSTM / GRU",
+                            "Deep Learning",
+                            "Aprende patrones complejos de largo plazo",
+                            "Requiere muchos datos, caja negra, difícil de diagnosticar",
+                            "Con grandes volúmenes de datos y variables múltiples"
+                        ),
+                        _fila_modelo(
+                            "Transformer",
+                            "Deep Learning",
+                            "Estado del arte en secuencias temporales largas",
+                            "Muy costoso computacionalmente, datos masivos necesarios",
+                            "Producción a gran escala con recursos computacionales"
+                        ),
+                    ])
+                ], className="tbl"),
+ 
+                # Escala de complejidad
+                html.Div([
+                    html.Div([
+                        html.Span("Menor complejidad", style={
+                            "fontFamily": MONO, "fontSize": ".70rem",
+                            "color": "var(--ink-dim)"
+                        }),
+                        html.Div(style={
+                            "flex": "1", "height": "4px", "margin": "0 12px",
+                            "background": "linear-gradient(90deg, var(--accent), var(--down))",
+                            "borderRadius": "2px",
+                        }),
+                        html.Span("Mayor complejidad", style={
+                            "fontFamily": MONO, "fontSize": ".70rem",
+                            "color": "var(--ink-dim)"
+                        }),
+                    ], style={"display": "flex", "alignItems": "center",
+                               "marginTop": "14px"}),
+                    html.P(
+                        "Mayor complejidad no siempre significa mayor precisión. "
+                        "Si ARIMA ya explica bien la estructura de la serie, "
+                        "añadir un LSTM puede introducir sobreajuste sin mejorar el pronóstico.",
+                        style={"fontFamily": MONO, "fontSize": ".72rem",
+                               "color": "var(--ink-dim)", "marginTop": "8px",
+                               "lineHeight": "1.6", "marginBottom": "0"}
+                    ),
+                ]),
+            ])
+        ], className="mb-3"),
+ 
+        # ── § 7 Diagnósticos ──────────────────────────────────────────────
+        dbc.Card([
+            dbc.CardHeader("🔍 Cómo saber si el modelo ARIMA está bien ajustado"),
+            dbc.CardBody([
+                dbc.Row([
+                    dbc.Col(_diagnostico(
+                        "Gráfica de residuos",
+                        "Los residuos deben parecer ruido blanco: "
+                        "sin tendencia, sin patrones, fluctuando alrededor de 0. "
+                        "Si hay patrones claros, el modelo no capturó toda la estructura."
+                    ), md=3),
+                    dbc.Col(_diagnostico(
+                        "ACF de residuos",
+                        "Las barras deben estar dentro de las bandas de confianza "
+                        "punteadas. Si alguna barra sale fuera, hay autocorrelación "
+                        "residual que el modelo no explicó."
+                    ), md=3),
+                    dbc.Col(_diagnostico(
+                        "PACF de residuos",
+                        "Similar al ACF pero controlando efectos indirectos. "
+                        "Barras fuera de las bandas sugieren que el orden "
+                        "p del modelo puede necesitar ajuste."
+                    ), md=3),
+                    dbc.Col(_diagnostico(
+                        "QQ-Plot",
+                        "Compara los cuantiles de los residuos con los de "
+                        "una distribución normal. Puntos cerca de la línea "
+                        "diagonal indican residuos aproximadamente normales."
+                    ), md=3),
+                ], className="mb-3"),
+                dbc.Row([
+                    dbc.Col(_diagnostico(
+                        "Ljung-Box (p > 0.05)",
+                        "Prueba formal de independencia de residuos. "
+                        "Si p > 0.05, no hay evidencia de autocorrelación "
+                        "residual → el modelo es adecuado."
+                    ), md=4),
+                    dbc.Col(_diagnostico(
+                        "AIC / BIC menores",
+                        "Para comparar dos modelos ARIMA con distintos órdenes, "
+                        "se elige el que tenga menor AIC o BIC. "
+                        "Estos criterios penalizan la complejidad innecesaria."
+                    ), md=4),
+                    dbc.Col(_diagnostico(
+                        "MAPE razonable",
+                        "En cripto, un MAPE por debajo del 5% en validación "
+                        "es excelente. Entre 5-15% es aceptable. "
+                        "Por encima del 15% sugiere que el modelo puede mejorarse."
+                    ), md=4),
+                ]),
+            ])
+        ], className="mb-3"),
+ 
+        # ── § 8 Gráfica visual ────────────────────────────────────────────
+        html.Div(id="modelo-chart-body"),
+ 
+    ], className="main", style={"paddingTop": "80px"})
+ 
+ 
+# ─────────────────────────────────────────────────────────────────────────────
+# CALLBACKS
+# ─────────────────────────────────────────────────────────────────────────────
+ 
+@callback(
+    Output("modelo-adf-graph",  "children"),
+    Output("modelo-chart-body", "children"),
+    Input("theme-store", "data"),
+)
+def render_charts(theme):
+    dark = (theme == "dark")
+    df   = fetch_histoday("BTC", days=365)
+ 
+    return _build_adf_visual(df, dark), _build_arima_visual(df, dark)
+ 
+ 
+def _build_adf_visual(df, dark):
+    """Muestra precios vs retornos para ilustrar estacionariedad."""
+    if df.empty:
+        return html.P("Sin datos.", className="mid")
+ 
+    bg, pp, grid, txt, tdim = _tc(dark)
+    fig = make_subplots(
+        rows=2, cols=1, shared_xaxes=True,
+        subplot_titles=["Precios (NO estacionario — media cambia)",
+                        "Retornos (SÍ estacionario — media ≈ 0%)"],
+        vertical_spacing=0.12,
+    )
+ 
+    fig.add_trace(go.Scatter(
+        x=df["date"], y=df["close"], mode="lines",
+        line=dict(color=_acc(dark), width=1.5), name="Precio",
+    ), row=1, col=1)
+ 
+    rets = df["close"].pct_change().dropna() * 100
+    fig.add_trace(go.Bar(
+        x=df["date"].iloc[1:], y=rets.values,
+        marker_color=[_up(dark) if r >= 0 else _dn(dark) for r in rets],
+        marker_line_width=0, opacity=0.7, name="Retorno %",
+    ), row=2, col=1)
+    fig.add_hline(y=0, line_dash="dot", line_color=tdim,
+                  line_width=1, row=2, col=1)
+ 
+    fig.update_layout(
+        height=360, paper_bgcolor=pp, plot_bgcolor=bg,
+        font=dict(family=MONO, color=txt, size=9),
+        title=dict(text="Precios vs Retornos — BTC 1 año",
+                   font=dict(color=txt, size=11)),
+        margin=dict(t=48, b=20, l=52, r=16),
+        showlegend=False,
+    )
+    for r in [1, 2]:
+        fig.update_xaxes(row=r, gridcolor=grid, zeroline=False,
+                         linecolor=grid, tickfont=dict(color=tdim, size=8))
+        fig.update_yaxes(row=r, gridcolor=grid, zeroline=False,
+                         linecolor=grid, tickfont=dict(color=tdim, size=8))
+    fig.update_yaxes(row=1, tickprefix="$", tickformat=",")
+    fig.update_yaxes(row=2, ticksuffix="%")
+    for ann in fig.layout.annotations:
+        ann.font.color = tdim
+        ann.font.size  = 9
+ 
+    return dcc.Graph(figure=fig, config={"displayModeBar": False},
+                     className="gw")
+ 
+ 
+def _build_arima_visual(df, dark):
+    """Ajusta ARIMA y muestra pronóstico con IC como visualización ilustrativa."""
+    if df.empty or len(df) < 60:
+        return html.P("Sin datos suficientes.", className="mid")
+ 
+    bg, pp, grid, txt, tdim = _tc(dark)
+ 
+    try:
+        import warnings
+        warnings.filterwarnings("ignore")
+        from statsmodels.tsa.arima.model import ARIMA as _ARIMA
+ 
+        serie     = df.set_index("date")["close"].replace(0, None).dropna()
+        val_size  = 30
+        train_s   = serie.iloc[:-val_size]
+        val_s     = serie.iloc[-val_size:]
+ 
+        fitted   = _ARIMA(train_s, order=(2, 1, 2)).fit()
+        val_fc   = fitted.forecast(steps=val_size)
+        fc       = fitted.get_forecast(steps=14)
+        fc_mean  = fc.predicted_mean
+        ci95     = fc.conf_int(alpha=0.05)
+        ci80     = fc.conf_int(alpha=0.20)
+        fc_dates = pd.date_range(
+            serie.index[-1] + pd.Timedelta(days=1), periods=14, freq="D"
+        )
+ 
+        mae   = float(np.mean(np.abs(val_fc.values - val_s.values)))
+        mape  = float(np.mean(
+            np.abs((val_fc.values - val_s.values) /
+                   np.clip(np.abs(val_s.values), 1e-9, None))) * 100)
+        cambio = (float(fc_mean.iloc[-1]) / float(serie.iloc[-1]) - 1) * 100
+        fc_col = _up(dark) if cambio >= 0 else _dn(dark)
+ 
+    except Exception:
+        return html.P("No se pudo ajustar el modelo para la visualización.",
+                      className="mid")
+ 
+    fig = go.Figure()
+    n_show = min(120, len(train_s))
+ 
+    fig.add_trace(go.Scatter(
+        x=train_s.index[-n_show:], y=train_s.values[-n_show:],
+        mode="lines", name="Histórico",
+        line=dict(color=tdim, width=1.2),
+    ))
+    fig.add_trace(go.Scatter(
+        x=val_s.index, y=val_s.values,
+        mode="lines", name="Real (validación)",
+        line=dict(color=txt, width=1.5),
+    ))
+    fig.add_trace(go.Scatter(
+        x=val_s.index, y=val_fc.values,
+        mode="lines", name="ARIMA (validación)",
+        line=dict(color=_acc(dark), width=1.5, dash="dot"),
+    ))
+    fig.add_trace(go.Scatter(
+        x=list(fc_dates) + list(reversed(fc_dates)),
+        y=list(ci95.iloc[:, 1]) + list(reversed(ci95.iloc[:, 0])),
+        fill="toself", fillcolor=_acc(dark).replace(")", ",0.10)").replace("rgb", "rgba"),
+        line=dict(color="rgba(0,0,0,0)"),
+        name="IC 95%", hoverinfo="skip",
+    ))
+    fig.add_trace(go.Scatter(
+        x=list(fc_dates) + list(reversed(fc_dates)),
+        y=list(ci80.iloc[:, 1]) + list(reversed(ci80.iloc[:, 0])),
+        fill="toself", fillcolor=_acc(dark).replace(")", ",0.20)").replace("rgb", "rgba"),
+        line=dict(color="rgba(0,0,0,0)"),
+        name="IC 80%", hoverinfo="skip",
+    ))
+    fig.add_trace(go.Scatter(
+        x=fc_dates, y=fc_mean.values,
+        mode="lines+markers", name="Pronóstico 14d",
+        line=dict(color=fc_col, width=2),
+        marker=dict(size=4, color=fc_col),
+    ))
+    fig.add_vline(x=str(fc_dates[0]), line_dash="dot",
+                  line_color=tdim, line_width=1)
+ 
+    fig.update_layout(
+        height=400, paper_bgcolor=pp, plot_bgcolor=bg,
+        font=dict(family=MONO, color=txt, size=9),
+        title=dict(
+            text=f"BTC/USD — ARIMA(2,1,2) · Pronóstico 14 días  "
+                 f"| MAE ${mae:,.0f}  MAPE {mape:.1f}%  "
+                 f"Cambio {'+' if cambio>=0 else ''}{cambio:.1f}%",
+            font=dict(color=txt, size=11),
+        ),
+        margin=dict(t=52, b=24, l=60, r=20),
+        hovermode="x unified",
+        legend=dict(font=dict(color=tdim, size=8), bgcolor="rgba(0,0,0,0)"),
+        xaxis=dict(gridcolor=grid, zeroline=False, linecolor=grid,
+                   tickfont=dict(color=tdim, size=8)),
+        yaxis=dict(gridcolor=grid, zeroline=False, tickprefix="$",
+                   tickformat=",", tickfont=dict(color=tdim, size=8)),
+    )
+ 
+    return html.Div([
+        html.Div("Pronóstico ARIMA en tiempo real — BTC", className="sec",
+                 style={"marginTop": "8px"}),
+        html.P(
+            "El gráfico muestra el ajuste del modelo en el período de validación "
+            "(línea sólida = precio real, línea punteada = lo que predijo ARIMA) "
+            "y el pronóstico para los próximos 14 días con intervalos de confianza. "
+            "Cuanto más se superpone la línea punteada con la sólida en validación, "
+            "mejor es el ajuste del modelo.",
+            style={"color": "var(--ink-mid)", "fontSize": ".87rem",
+                   "lineHeight": "1.65", "marginBottom": "10px",
+                   "padding": "10px 14px", "background": "var(--bg-subtle)",
+                   "borderRadius": "6px", "borderLeft": "3px solid var(--accent)"}
+        ),
+        dcc.Graph(figure=fig, config={"displayModeBar": False},
+                  className="gw"),
+    ])
+ 
+ 
+# ─────────────────────────────────────────────────────────────────────────────
+# HELPERS DE UI
+# ─────────────────────────────────────────────────────────────────────────────
+ 
+def _razon(num, titulo, desc, color):
+    return html.Div([
+        html.Span(num, style={
+            "fontFamily": "Syne, sans-serif", "fontSize": "1.6rem",
+            "fontWeight": "700", "color": color, "display": "block",
+            "lineHeight": "1", "marginBottom": "5px",
+        }),
+        html.Strong(titulo, style={
+            "display": "block", "color": "var(--ink)",
+            "fontSize": ".90rem", "marginBottom": "8px",
+        }),
+        html.P(desc, style={
+            "color": "var(--ink-mid)", "fontSize": ".85rem",
+            "lineHeight": "1.65", "marginBottom": "0",
+        }),
+    ], style={
+        "background": "var(--bg-subtle)", "borderRadius": "8px",
+        "padding": "16px", "marginBottom": "12px",
+        "border": "1px solid var(--rule)",
+        "borderLeft": f"3px solid {color}",
+        "height": "calc(100% - 12px)",
+    })
+ 
+ 
+def _formula(titulo, formula, desc):
+    return html.Div([
+        html.Strong(titulo, style={
+            "display": "block", "color": "var(--ink)",
+            "fontSize": ".88rem", "marginBottom": "6px",
+        }),
+        html.Code(formula, style={
+            "display": "block", "padding": "8px 12px",
+            "background": "var(--bg-hover)", "borderRadius": "5px",
+            "fontSize": ".80rem", "color": "var(--accent)",
+            "fontFamily": MONO, "marginBottom": "8px",
+        }),
+        html.P(desc, style={
+            "color": "var(--ink-mid)", "fontSize": ".83rem",
+            "lineHeight": "1.6", "marginBottom": "0",
+        }),
+    ], style={
+        "background": "var(--bg-subtle)", "borderRadius": "8px",
+        "padding": "13px", "marginBottom": "10px",
+        "border": "1px solid var(--rule)",
+    })
+ 
+ 
+def _punto(titulo, desc):
+    return html.Div([
+        html.Strong(titulo, style={
+            "display": "block", "color": "var(--accent)",
+            "fontSize": ".88rem", "marginBottom": "6px",
+        }),
+        html.P(desc, style={
+            "color": "var(--ink-mid)", "fontSize": ".83rem",
+            "lineHeight": "1.6", "marginBottom": "0",
+        }),
+    ], style={
+        "background": "var(--bg-subtle)", "borderRadius": "8px",
+        "padding": "13px", "border": "1px solid var(--rule)",
+    })
+ 
+ 
+def _metrica(sigla, nombre, formula, desc, color):
+    return html.Div([
+        html.Div([
+            html.Strong(sigla, style={
+                "fontFamily": "Syne, sans-serif", "fontSize": "1.4rem",
+                "fontWeight": "700", "color": color,
+            }),
+            html.Span(f" — {nombre}", style={
+                "color": "var(--ink)", "fontSize": ".88rem",
+            }),
+        ], style={"marginBottom": "8px"}),
+        html.Code(formula, style={
+            "display": "block", "padding": "7px 10px",
+            "background": "var(--bg-hover)", "borderRadius": "5px",
+            "fontSize": ".76rem", "color": "var(--accent)",
+            "fontFamily": MONO, "marginBottom": "8px",
+        }),
+        html.P(desc, style={
+            "color": "var(--ink-mid)", "fontSize": ".83rem",
+            "lineHeight": "1.6", "marginBottom": "0",
+        }),
+    ], style={
+        "background": "var(--bg-subtle)", "borderRadius": "8px",
+        "padding": "14px", "border": "1px solid var(--rule)",
+        "borderTop": f"3px solid {color}",
+    })
+ 
+ 
+def _limitacion(titulo, desc, color):
+    return html.Div([
+        html.Strong(titulo, style={
+            "display": "block", "color": color,
+            "fontSize": ".90rem", "marginBottom": "8px",
+        }),
+        html.P(desc, style={
+            "color": "var(--ink-mid)", "fontSize": ".85rem",
+            "lineHeight": "1.65", "marginBottom": "0",
+        }),
+    ], style={
+        "background": "var(--down-bg)" if color == "var(--down)" else "var(--bg-subtle)",
+        "borderRadius": "8px", "padding": "14px", "marginBottom": "12px",
+        "border": f"1px solid var(--down-b)" if color == "var(--down)"
+                  else "1px solid var(--rule)",
+        "height": "calc(100% - 12px)",
+    })
+ 
+ 
+def _fila_modelo(nombre, tipo, ventaja, limitacion, cuando, highlight=False):
+    bg = "var(--accent-lt)" if highlight else "transparent"
+    fw = "600" if highlight else "400"
+    return html.Tr([
+        html.Td(html.Strong(nombre) if highlight else nombre,
+                style={"fontFamily": MONO, "fontSize": ".80rem",
+                       "background": bg, "fontWeight": fw,
+                       "color": "var(--accent)" if highlight else "var(--ink)"}),
+        html.Td(tipo,      style={"fontSize": ".80rem", "color": "var(--ink-mid)"}),
+        html.Td(ventaja,   style={"fontSize": ".80rem", "color": "var(--ink-mid)"}),
+        html.Td(limitacion,style={"fontSize": ".80rem", "color": "var(--ink-mid)"}),
+        html.Td(cuando,    style={"fontSize": ".80rem", "color": "var(--ink-mid)"}),
+    ], style={"background": bg} if highlight else {})
+ 
+ 
+def _diagnostico(titulo, desc):
+    return html.Div([
+        html.Strong(titulo, style={
+            "display": "block", "color": "var(--accent)",
+            "fontSize": ".88rem", "marginBottom": "7px",
+        }),
+        html.P(desc, style={
+            "color": "var(--ink-mid)", "fontSize": ".83rem",
+            "lineHeight": "1.6", "marginBottom": "0",
+        }),
+    ], style={
+        "background": "var(--bg-subtle)", "borderRadius": "8px",
+        "padding": "13px", "border": "1px solid var(--rule)",
+        "marginBottom": "12px", "height": "calc(100% - 12px)",
+    })
+ 
+ 
+def _tc(dark):
+    if dark:
+        return "#0c0c0e","#0c0c0e","#2a2a2e","#f0f0ee","#55554e"
+    return "#ffffff","#ffffff","#f2f1ee","#1a1a18","#a09d96"
+ 
+ 
+def _acc(dark): return "#5a7aec" if dark else "#1a46c4"
+def _up(dark):  return "#4ade80" if dark else "#166534"
+def _dn(dark):  return "#f87171" if dark else "#991b1b"
+ 
