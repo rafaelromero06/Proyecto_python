@@ -1,9 +1,4 @@
-"""
-pages/modelo.py
-Explica por qué ARIMA es el modelo más apropiado para este proyecto,
-sus fundamentos, limitaciones y comparación con alternativas.
-"""
- 
+
 import os, sys
 import numpy as np
 import pandas as pd

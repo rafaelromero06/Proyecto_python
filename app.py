@@ -27,7 +27,7 @@ from pages import marco_teorico
 from pages import mercado
 from pages import historico
 from pages import eda
-from pages import modelo
+from pages import modelos
 from pages import prediccion
 
 # ── Definición del menú ───────────────────────────────────────────────────────
@@ -37,7 +37,7 @@ NAV = [
     ("mercado",    "📊", "Mercado en vivo"),
     ("historico",  "⏳", "Histórico 3 años"),
     ("eda",        "🔍", "Análisis exploratorio"),
-    ("modelo",     "⚙️", "Modelo de predicción"),
+    ("modelos",    "⚙️", "Modelos de predicción"),
     ("prediccion", "📈", "Predicción ARIMA"),
 ]
 
@@ -204,7 +204,7 @@ def render(page, theme, is_open):
         "mercado"   : mercado.layout,
         "historico" : historico.layout,
         "eda"       : eda.layout,
-        "modelo"    : modelo.layout,
+        "modelos"   : modelos.layout,
         "prediccion": prediccion.layout,
     }
     
