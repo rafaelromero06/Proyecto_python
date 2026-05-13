@@ -169,8 +169,8 @@ def layout():
                     "#7ed4c5"
                 ), md=6),
                 dbc.Col(_objetivo(
-                    "04", "Identificar patrones de volatilidad",
-                    "Determinar qué monedas son más estables y cuáles más riesgosas, "
+                    "04", "Predecir precios a futuro",
+                    "Determinar qué monedas sufriran cambios en torno a los días, "
                     "midiendo el rango de variación de precios y comparando por "
                     "tamaño de capitalización de mercado.",
                     "#f7c87e"
