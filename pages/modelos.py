@@ -321,7 +321,7 @@ def layout():
                     ])),
                     html.Tbody([
                         _fila_modelo(
-                            "ARIMA ← aquí estamos",
+                            "ARIMA",
                             "Estadístico",
                             "Interpretable, diagnósticable, intervalos de confianza",
                             "No modela volatilidad variable ni no linealidades",
