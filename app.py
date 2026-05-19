@@ -32,13 +32,13 @@ from pages import prediccion
 
 # ── Definición del menú ───────────────────────────────────────────────────────
 NAV = [
-    ("inicio",     "🏠", "Inicio"),
-    ("marco_teorico","📖", "Marco teorico"),
-    ("mercado",    "📊", "Mercado en vivo"),
-    ("historico",  "⏳", "Histórico 3 años"),
-    ("eda",        "🔍", "Análisis exploratorio"),
-    ("modelos",    "⚙️", "Modelos de predicción"),
-    ("prediccion", "📈", "Predicción ARIMA"),
+    ("inicio",     " ", "Inicio"),
+    ("marco_teorico"," ", "Marco teorico"),
+    ("mercado",    " ", "Mercado en vivo"),
+    ("historico",  " ", "Histórico 3 años"),
+    ("eda",        " ", "Análisis exploratorio"),
+    ("modelos",    " ", "Modelos de predicción"),
+    ("prediccion", " ", "Predicción ARIMA"),
 ]
 
 def _sidebar(active: str, is_open: bool) -> html.Div:
